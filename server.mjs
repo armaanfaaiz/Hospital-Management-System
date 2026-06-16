@@ -27,6 +27,13 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
+// Serve static files from dist in production
+const isProduction = process.argv.includes('--production') || process.env.NODE_ENV === 'production' || process.env.VERCEL;
+if (isProduction) {
+  const distPath = path.join(__dirname, 'dist');
+  app.use(express.static(distPath));
+}
+
 const tableConfig = {
   app_users: { columns: ['id', 'email', 'password_hash', 'role', 'first_name', 'last_name', 'phone', 'created_at', 'updated_at'] },
   profiles: { columns: ['id', 'user_id', 'role', 'first_name', 'last_name', 'phone', 'created_at', 'updated_at'] },
@@ -169,23 +176,20 @@ app.delete('/api/:table', requireAuth, async (req, res) => {
   }
 });
 
-const isProduction = process.argv.includes('--production') || process.env.NODE_ENV === 'production' || process.env.VERCEL;
-
-if (isProduction) {
-  const distPath = path.join(__dirname, 'dist');
-  if (fs.existsSync(distPath)) {
-    app.use(express.static(distPath));
-    app.use((_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-} else {
+if (!isProduction) {
   const { createServer } = await import('vite');
   const vite = await createServer({
     server: { middlewareMode: true },
     appType: 'spa'
   });
   app.use(vite.middlewares);
+}
+
+// SPA fallback - serve index.html for all unmatched routes in production
+if (isProduction) {
+  app.use((_req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
 }
 
 const host = process.env.VERCEL ? '0.0.0.0' : '127.0.0.1';
