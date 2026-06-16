@@ -172,11 +172,13 @@ app.delete('/api/:table', requireAuth, async (req, res) => {
 const isProduction = process.argv.includes('--production') || process.env.NODE_ENV === 'production' || process.env.VERCEL;
 
 if (isProduction) {
-  app.use(express.static(path.join(__dirname, 'dist')));
-
-  app.use((_req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-  });
+  const distPath = path.join(__dirname, 'dist');
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    app.use((_req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
 } else {
   const { createServer } = await import('vite');
   const vite = await createServer({
