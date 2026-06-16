@@ -169,7 +169,9 @@ app.delete('/api/:table', requireAuth, async (req, res) => {
   }
 });
 
-if (process.argv.includes('--production')) {
+const isProduction = process.argv.includes('--production') || process.env.NODE_ENV === 'production' || process.env.VERCEL;
+
+if (isProduction) {
   app.use(express.static(path.join(__dirname, 'dist')));
 
   app.use((_req, res) => {
@@ -184,8 +186,9 @@ if (process.argv.includes('--production')) {
   app.use(vite.middlewares);
 }
 
-app.listen(port, '127.0.0.1', () => {
-  console.log(`MediCare running at http://127.0.0.1:${port}/`);
+const host = process.env.VERCEL ? '0.0.0.0' : '127.0.0.1';
+app.listen(port, host, () => {
+  console.log(`MediCare running at http://${host}:${port}/`);
 });
 
 function loadEnv(filePath) {
